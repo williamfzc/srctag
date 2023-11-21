@@ -1,8 +1,9 @@
 from srctag.collector import FileLevelEnum, Collector
 from srctag.storage import Storage
+import os
 
 collector = Collector()
-collector.config.repo_root = ".."
+collector.config.repo_root = os.path.dirname(os.path.dirname(__file__))
 collector.config.file_level = FileLevelEnum.DIR
 collector.config.max_depth_limit = 16
 
