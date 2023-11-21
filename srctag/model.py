@@ -7,6 +7,8 @@ class FileContext(object):
     def __init__(self, name: str):
         self.name: str = name
         self.commits: typing.List[Commit] = []
+
+        # todo: should contain float values for score
         self.tags: typing.Set[str] = set()
 
 

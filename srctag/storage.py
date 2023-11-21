@@ -4,12 +4,15 @@ import chromadb
 from chromadb.utils.embedding_functions import SentenceTransformerEmbeddingFunction
 from pydantic_settings import BaseSettings
 
-from srctag.model import FileContext
+from srctag.model import FileContext, RuntimeContext
 
 
 class StorageConfig(BaseSettings):
     collection_name: str = "default_collection"
-    st_model_name: str = "paraphrase-multilingual-MiniLM-L12-v2"
+
+    # English: paraphrase-MiniLM-L6-v2
+    # Multi langs: paraphrase-multilingual-MiniLM-L12-v2
+    st_model_name: str = "paraphrase-MiniLM-L6-v2"
 
 
 class Storage(object):
@@ -33,3 +36,7 @@ class Storage(object):
         self.chromadb_collection.add(
             documents=[os.linesep.join(sentences)], metadatas=[{"source": file.name}], ids=[file.name]
         )
+
+    def embed_ctx(self, ctx: RuntimeContext):
+        for each_file in ctx.files.values():
+            self.embed_file(each_file)
