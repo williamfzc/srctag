@@ -18,12 +18,18 @@ class FileLevelEnum(str, Enum):
     DIR: str = "DIR"
 
 
+class ScanRuleEnum(str, Enum):
+    DFS: str = "DFS"
+    BFS: str = "BFS"
+
+
 class CollectorConfig(BaseSettings):
     repo_root: str = "."
     include_regex: str = ""
     commit_include_regex: str = ""
-    max_depth_limit: int = 128
+    max_depth_limit: int = 16
     file_level: FileLevelEnum = FileLevelEnum.FILE
+    scan_rule: ScanRuleEnum = ScanRuleEnum.DFS
 
 
 class Collector(object):
@@ -40,7 +46,11 @@ class Collector(object):
         logger.debug("git metadata collecting ...")
         ctx = RuntimeContext()
         self._collect_files(ctx)
-        self._collect_histories(ctx)
+
+        if self.config.scan_rule == ScanRuleEnum.DFS:
+            self._collect_histories(ctx)
+        else:
+            self._collect_histories_globally(ctx)
 
         logger.debug("metadata ready")
         return ctx
