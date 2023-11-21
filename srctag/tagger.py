@@ -1,7 +1,6 @@
 import typing
 
 from chromadb import QueryResult, Metadata
-from loguru import logger
 from pydantic_settings import BaseSettings
 
 from srctag.storage import Storage
@@ -28,7 +27,6 @@ class Tagger(object):
                 n_results=self.config.n_results,
             )
             files: typing.List[Metadata] = query_result["metadatas"][0]
-            logger.debug(f"tag {each_tag} files: {files}")
 
             for each_file in files:
                 each_file_name = each_file["source"]

@@ -3,6 +3,8 @@ import os
 import chromadb
 from chromadb.utils.embedding_functions import SentenceTransformerEmbeddingFunction
 from pydantic_settings import BaseSettings
+from tqdm import tqdm
+from loguru import logger
 
 from srctag.model import FileContext, RuntimeContext
 
@@ -38,5 +40,7 @@ class Storage(object):
         )
 
     def embed_ctx(self, ctx: RuntimeContext):
-        for each_file in ctx.files.values():
+        logger.debug("start embedding source files")
+        for each_file in tqdm(ctx.files.values()):
             self.embed_file(each_file)
+        logger.debug("embedding finished")
