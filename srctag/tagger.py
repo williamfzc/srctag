@@ -62,9 +62,13 @@ class Tagger(object):
 
             minimum = min(distances)
             maximum = max(distances)
-            normalized_scores = [
-                1 - (x - minimum) / (maximum - minimum) for x in distances
-            ]
+            if maximum == minimum:
+                # all values are the same
+                normalized_scores = [1 for _ in distances]
+            else:
+                normalized_scores = [
+                    1 - ((x - minimum) / (maximum - minimum)) for x in distances
+                ]
 
             for each_file, each_score in zip(files, normalized_scores):
                 each_file_name = each_file["source"]
