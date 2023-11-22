@@ -1,8 +1,13 @@
 [tool.poetry]
 name = "srctag"
-version = "0.1.0"
-description = ""
+version = "0.1.1"
+description = "Tag source files with real-world requirements."
 authors = ["williamfzc <williamfzc@foxmail.com>"]
+license = "Apache-2.0"
+readme = "README.md"
+packages = [
+    { include = "srctag" }
+]
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
