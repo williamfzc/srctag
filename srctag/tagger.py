@@ -1,5 +1,6 @@
 import csv
 import typing
+from collections import OrderedDict
 
 from chromadb import QueryResult, Metadata
 from pydantic import BaseModel
@@ -12,6 +13,7 @@ SingleTagResult = typing.Dict[str, float]
 
 
 class TagResult(BaseModel):
+    # todo: need some other ways for querying flexibly
     files: typing.Dict[str, SingleTagResult] = dict()
 
     def export_csv(self, path: str = "srctag-output.csv") -> None:
@@ -73,7 +75,9 @@ class Tagger(object):
             for each_file, each_score in zip(files, normalized_scores):
                 each_file_name = each_file["source"]
                 if each_file_name not in ret:
-                    ret[each_file_name] = dict()
+                    ret[each_file_name] = OrderedDict()
                 ret[each_file_name][each_tag] = each_score
+            # END file loop
+        # END tag loop
 
         return TagResult(files=ret)
