@@ -93,9 +93,12 @@ class Collector(object):
     def _collect_history(self, repo: Repo, file_path: str) -> typing.List[Commit]:
         kwargs = {
             "paths": file_path,
+            "no-merges": True,
+            "no-walk": True,
+            "single-worktree": True,
         }
         if self.config.max_depth_limit != -1:
-            kwargs["max_count"] = self.config.max_depth_limit
+            kwargs["max-count"] = self.config.max_depth_limit
 
         commit_include_regex = None
         if self.config.commit_include_regex:
