@@ -30,7 +30,6 @@ jobs:
         run: pip install poetry
       - name: Run examples
         run: |
-          poetry install
-          poetry add sentence_transformers
+          poetry install --all-extras
           poetry run python3 examples/write.py
           poetry run python3 examples/read.py

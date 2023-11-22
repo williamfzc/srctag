@@ -16,5 +16,10 @@ pydantic-settings = "*"
 pydantic = "*"
 tqdm = "*"
 loguru = "^0.7.2"
+
 # actually srctag still requires `sentence_transformers` here
 # but pytorch is a large dep which I don't want to manage it here
+sentence-transformers = { version = "^2.2.2", optional = true }
+
+[tool.poetry.extras]
+embedding = ["sentence-transformers"]
