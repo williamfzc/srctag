@@ -84,9 +84,7 @@ class Collector(object):
                 each_dir = os.path.dirname(each)
                 ctx.files[each_dir] = FileContext(each_dir)
             else:
-                raise SrcTagException(
-                    f"invalid file level: {self.config.file_level}"
-                )
+                raise SrcTagException(f"invalid file level: {self.config.file_level}")
 
         logger.debug(f"file {len(ctx.files)} collected")
 
@@ -99,16 +97,11 @@ class Collector(object):
         }
         if self.config.max_depth_limit != -1:
             kwargs["max-count"] = self.config.max_depth_limit
-
-        commit_include_regex = None
         if self.config.commit_include_regex:
-            commit_include_regex = re.compile(self.config.commit_include_regex)
+            kwargs["grep"] = self.config.commit_include_regex
 
         result = []
         for commit in repo.iter_commits(**kwargs):
-            if commit_include_regex:
-                if not commit_include_regex.match(commit.message):
-                    continue
             result.append(commit)
         return result
 
@@ -139,7 +132,9 @@ class Collector(object):
                 if not commit_include_regex.match(commit.message):
                     continue
 
-            for new_file in git_repo.git.show(commit.hexsha, name_only=True).split(os.linesep):
+            for new_file in git_repo.git.show(commit.hexsha, name_only=True).split(
+                os.linesep
+            ):
                 if include_regex:
                     if not include_regex.match(new_file):
                         continue
