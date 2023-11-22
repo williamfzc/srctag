@@ -26,10 +26,11 @@ jobs:
         uses: actions/setup-python@v3
         with:
           python-version: ${{ matrix.python-version }}
-      - name: Install pipenv
-        run: pip install pipenv
+      - name: Install poetry
+        run: pip install poetry
       - name: Run examples
         run: |
-          pipenv install
-          pipenv run python3 examples/write.py
-          pipenv run python3 examples/read.py
+          poetry install
+          poetry add sentence_transformers
+          poetry run python3 examples/write.py
+          poetry run python3 examples/read.py

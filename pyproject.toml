@@ -1,0 +1,20 @@
+[tool.poetry]
+name = "srctag"
+version = "0.1.0"
+description = ""
+authors = ["williamfzc <williamfzc@foxmail.com>"]
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry.dependencies]
+python = "^3.7"
+gitpython = "*"
+chromadb = "*"
+pydantic-settings = "*"
+pydantic = "*"
+tqdm = "*"
+loguru = "^0.7.2"
+# actually srctag still requires `sentence_transformers` here
+# but pytorch is a large dep which I don't want to manage it here
