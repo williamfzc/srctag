@@ -13,7 +13,7 @@ from srctag.model import FileContext, RuntimeContext
 
 
 class StorageConfig(BaseSettings):
-    db_path: str = "./chroma"
+    db_path: str = ""
     collection_name: str = "default_collection"
 
     # English: paraphrase-MiniLM-L6-v2
@@ -33,7 +33,12 @@ class Storage(object):
     def init_chroma(self):
         if self.chromadb and self.chromadb_collection:
             return
-        self.chromadb = chromadb.PersistentClient(path=self.config.db_path)
+
+        if self.config.db_path:
+            self.chromadb = chromadb.PersistentClient(path=self.config.db_path)
+        else:
+            self.chromadb = chromadb.Client()
+
         self.chromadb_collection = self.chromadb.get_or_create_collection(
             self.config.collection_name,
             embedding_function=SentenceTransformerEmbeddingFunction(

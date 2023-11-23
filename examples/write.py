@@ -9,4 +9,5 @@ collector.config.max_depth_limit = 16
 
 ctx = collector.collect_metadata()
 storage = Storage()
+storage.config.db_path = "./chroma"
 storage.embed_ctx(ctx)
