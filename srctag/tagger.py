@@ -3,8 +3,10 @@ from collections import OrderedDict
 
 import pandas as pd
 from chromadb import QueryResult, Metadata
-from pandas import Index, DataFrame
+from pandas import Index
 from pydantic_settings import BaseSettings
+from tqdm import tqdm
+from loguru import logger
 
 from srctag.storage import Storage
 
@@ -19,9 +21,11 @@ class TagResult(object):
     def tags(self) -> Index:
         return self.scores_df.columns
 
-    def top_n(self, path: str, n: int) -> DataFrame:
-        row = self.scores_df.loc[path]
-        return row.nlargest(n)
+    def top_n_tags(self, file_name, n) -> typing.List[str]:
+        return self.scores_df.loc[file_name].nlargest(n).index.tolist()
+
+    def top_n_files(self, tag_name, n) -> typing.List[str]:
+        return self.scores_df.nlargest(n, tag_name).index.tolist()
 
 
 class TaggerConfig(BaseSettings):
@@ -44,8 +48,9 @@ class Tagger(object):
         file_count = storage.chromadb_collection.count()
         n_results = int(file_count * self.config.n_percent)
 
+        logger.info(f"start tagging source files ...")
         ret = dict()
-        for each_tag in self.config.tags:
+        for each_tag in tqdm(self.config.tags):
             query_result: QueryResult = storage.chromadb_collection.query(
                 query_texts=each_tag,
                 n_results=n_results,
@@ -73,5 +78,6 @@ class Tagger(object):
             # END file loop
         # END tag loop
 
+        logger.info(f"tag finished")
         scores_df = pd.DataFrame.from_dict(ret, orient="index")
         return TagResult(scores_df=scores_df)

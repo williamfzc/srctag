@@ -18,7 +18,15 @@ def test_api():
     tagger.config.tags = [
         "embedding",
         "search",
+        "tag",
+        "test",
+        "example"
     ]
     tag_result = tagger.tag(storage)
-    logger.info(f"tags: {tag_result.tags().array}")
-    assert tag_result.tags().array
+
+    assert tag_result.top_n_tags("srctag/storage.py", 1)
+    assert tag_result.top_n_files("embedding", 1)
+
+    # result check
+    assert tag_result.top_n_tags("srctag/storage.py", 1)[0] == "embedding"
+    assert tag_result.top_n_tags("examples/read.py", 1)[0] == "example"
