@@ -37,6 +37,7 @@ class Storage(object):
         if self.config.db_path:
             self.chromadb = chromadb.PersistentClient(path=self.config.db_path)
         else:
+            # by default, using in-memory db
             self.chromadb = chromadb.Client()
 
         self.chromadb_collection = self.chromadb.get_or_create_collection(
@@ -46,16 +47,21 @@ class Storage(object):
             ),
         )
 
+    def process_file_ctx_to_doc(self, file: FileContext) -> str:
+        """ can be overwritten for custom processing """
+        sentences = [each.message.split(os.linesep)[0] for each in file.commits]
+        doc = os.linesep.join(sentences)
+        return doc
+
     def embed_file(self, file: FileContext):
         if not file.commits:
             logger.warning(f"no related commits found: {file.name}")
             return
 
+        doc = self.process_file_ctx_to_doc(file)
         self.init_chroma()
-        sentences = [each.message.split(os.linesep)[0] for each in file.commits]
-
         self.chromadb_collection.add(
-            documents=[os.linesep.join(sentences)],
+            documents=[doc],
             metadatas=[{"source": file.name}],
             ids=[file.name],
         )
