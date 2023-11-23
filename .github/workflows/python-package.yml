@@ -33,3 +33,4 @@ jobs:
           poetry install --all-extras
           poetry run python3 examples/write.py
           poetry run python3 examples/read.py
+          poetry run pytest

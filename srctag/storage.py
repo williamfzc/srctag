@@ -42,6 +42,10 @@ class Storage(object):
         )
 
     def embed_file(self, file: FileContext):
+        if not file.commits:
+            logger.warning(f"no related commits found: {file.name}")
+            return
+
         self.init_chroma()
         sentences = [each.message.split(os.linesep)[0] for each in file.commits]
 

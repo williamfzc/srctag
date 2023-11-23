@@ -1,13 +1,24 @@
-from srctag import CollectorLayer, Storage
+import os
 
-def test_abc():
-    collector = CollectorLayer()
-    collector.config.repo_root = "."
-    collector.config.max_depth_limit = 1
+from loguru import logger
+
+from srctag.collector import Collector
+from srctag.storage import Storage
+from srctag.tagger import Tagger
+
+
+def test_api():
+    collector = Collector()
+    collector.config.repo_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     ctx = collector.collect_metadata()
     storage = Storage()
-    for each_file in ctx.files.values():
-        storage.embed_file(each_file)
+    storage.embed_ctx(ctx)
 
-    result = storage.chromadb_collection.query(query_texts=["docs"])
-    print(result)
+    tagger = Tagger()
+    tagger.config.tags = [
+        "embedding",
+        "search",
+    ]
+    tag_result = tagger.tag(storage)
+    logger.info(f"tags: {tag_result.tags().array}")
+    assert tag_result.tags().array

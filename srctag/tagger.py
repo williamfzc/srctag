@@ -1,35 +1,27 @@
-import csv
 import typing
 from collections import OrderedDict
 
+import pandas as pd
 from chromadb import QueryResult, Metadata
-from pydantic import BaseModel
+from pandas import Index, DataFrame
 from pydantic_settings import BaseSettings
 
 from srctag.storage import Storage
 
-# tag name -> distance score
-SingleTagResult = typing.Dict[str, float]
 
-
-class TagResult(BaseModel):
-    # todo: need some other ways for querying flexibly
-    files: typing.Dict[str, SingleTagResult] = dict()
+class TagResult(object):
+    def __init__(self, scores_df: pd.DataFrame):
+        self.scores_df = scores_df
 
     def export_csv(self, path: str = "srctag-output.csv") -> None:
-        file_list = self.files.keys()
-        col_list = set().union(*[d.keys() for d in self.files.values()])
-        with open(path, "w", newline="", encoding="utf-8-sig") as file:
-            writer = csv.writer(file)
+        self.scores_df.to_csv(path)
 
-            header = [""] + list(col_list)
-            writer.writerow(header)
+    def tags(self) -> Index:
+        return self.scores_df.columns
 
-            for each_file in file_list:
-                row = [each_file] + [
-                    self.files[each_file].get(subkey, "-1") for subkey in col_list
-                ]
-                writer.writerow(row)
+    def top_n(self, path: str, n: int) -> DataFrame:
+        row = self.scores_df.loc[path]
+        return row.nlargest(n)
 
 
 class TaggerConfig(BaseSettings):
@@ -59,7 +51,8 @@ class Tagger(object):
                 n_results=n_results,
                 include=["metadatas", "distances"],
             )
-            files: typing.List[Metadata] = query_result["metadatas"][0]
+
+            metadatas: typing.List[Metadata] = query_result["metadatas"][0]
             distances: typing.List[float] = query_result["distances"][0]
 
             minimum = min(distances)
@@ -72,12 +65,13 @@ class Tagger(object):
                     1 - ((x - minimum) / (maximum - minimum)) for x in distances
                 ]
 
-            for each_file, each_score in zip(files, normalized_scores):
-                each_file_name = each_file["source"]
+            for each_metadata, each_score in zip(metadatas, normalized_scores):
+                each_file_name = each_metadata["source"]
                 if each_file_name not in ret:
                     ret[each_file_name] = OrderedDict()
                 ret[each_file_name][each_tag] = each_score
             # END file loop
         # END tag loop
 
-        return TagResult(files=ret)
+        scores_df = pd.DataFrame.from_dict(ret, orient="index")
+        return TagResult(scores_df=scores_df)

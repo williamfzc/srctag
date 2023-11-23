@@ -9,6 +9,9 @@ packages = [
     { include = "srctag" }
 ]
 
+[tool.poetry.group.dev.dependencies]
+pytest = "^7.4.3"
+
 [build-system]
 requires = ["poetry-core>=1.0.0"]
 build-backend = "poetry.core.masonry.api"
@@ -21,6 +24,7 @@ pydantic-settings = "*"
 pydantic = "*"
 tqdm = "*"
 loguru = "^0.7.2"
+pandas = "^2.0.3"
 
 # actually srctag still requires `sentence_transformers` here
 # but pytorch is a large dep which I don't want to manage it here
