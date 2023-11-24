@@ -18,6 +18,11 @@ class TagResult(object):
     def export_csv(self, path: str = "srctag-output.csv") -> None:
         self.scores_df.to_csv(path)
 
+    @classmethod
+    def import_csv(cls, path: str) -> "TagResult":
+        scores_df = pd.read_csv(path, index_col=0)
+        return TagResult(scores_df=scores_df)
+
     def tags(self) -> Index:
         return self.scores_df.columns
 
