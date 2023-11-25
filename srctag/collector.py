@@ -25,10 +25,19 @@ class ScanRuleEnum(str, Enum):
 
 class CollectorConfig(BaseSettings):
     repo_root: str = "."
+
+    # file name include regex
     include_regex: str = ""
+
+    # commit msg include regex
     commit_include_regex: str = ""
+
+    # set -1 to break the limit
     max_depth_limit: int = 16
     file_level: FileLevelEnum = FileLevelEnum.FILE
+
+    # DFS: git log
+    # BFS: walk the commits and get each diff files
     scan_rule: ScanRuleEnum = ScanRuleEnum.DFS
 
 
@@ -94,9 +103,8 @@ class Collector(object):
             "no-merges": True,
             "no-walk": True,
             "single-worktree": True,
+            "max-count": self.config.max_depth_limit,
         }
-        if self.config.max_depth_limit != -1:
-            kwargs["max-count"] = self.config.max_depth_limit
         if self.config.commit_include_regex:
             kwargs["grep"] = self.config.commit_include_regex
 
@@ -133,7 +141,7 @@ class Collector(object):
                     continue
 
             for new_file in git_repo.git.show(commit.hexsha, name_only=True).split(
-                os.linesep
+                    os.linesep
             ):
                 if include_regex:
                     if not include_regex.match(new_file):
