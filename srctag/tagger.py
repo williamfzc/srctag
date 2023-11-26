@@ -8,7 +8,7 @@ from pydantic_settings import BaseSettings
 from tqdm import tqdm
 from loguru import logger
 
-from srctag.storage import Storage
+from srctag.storage import Storage, MetadataConstant
 
 
 class TagResult(object):
@@ -50,11 +50,12 @@ class Tagger(object):
 
     def tag(self, storage: Storage) -> TagResult:
         storage.init_chroma()
-        file_count = storage.chromadb_collection.count()
-        n_results = int(file_count * self.config.n_percent)
+        doc_count = storage.chromadb_collection.count()
+        n_results = int(doc_count * self.config.n_percent)
 
         logger.info(f"start tagging source files ...")
-        ret = dict()
+
+        tag_results = []
         for each_tag in tqdm(self.config.tags):
             query_result: QueryResult = storage.chromadb_collection.query(
                 query_texts=each_tag,
@@ -76,13 +77,29 @@ class Tagger(object):
                 ]
 
             for each_metadata, each_score in zip(metadatas, normalized_scores):
-                each_file_name = each_metadata["source"]
-                if each_file_name not in ret:
-                    ret[each_file_name] = OrderedDict()
-                ret[each_file_name][each_tag] = each_score
+                each_file_name = each_metadata[MetadataConstant.KEY_SOURCE]
+                tag_results.append((each_tag, each_file_name, each_score))
             # END file loop
         # END tag loop
 
-        logger.info(f"tag finished")
+        ret = dict()
+        for each_tag, each_file_name, each_score in tag_results:
+            if each_file_name not in ret:
+                # has not been touched by other tags
+                # the score order is decreasing
+                ret[each_file_name] = OrderedDict()
+            each_file_tag_result = ret[each_file_name]
+
+            if each_tag not in each_file_tag_result:
+                each_file_tag_result[each_tag] = each_score
+            else:
+                # has been touched by other commits
+                # merge these scores
+                each_file_tag_result[each_tag] += each_score
+        # END tag_results
+
         scores_df = pd.DataFrame.from_dict(ret, orient="index")
+        # tag level normalization after merge
+        scores_df = scores_df.apply(lambda x: (x - x.min()) / (x.max() - x.min()), axis=0)
+        logger.info(f"tag finished")
         return TagResult(scores_df=scores_df)

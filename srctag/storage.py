@@ -1,15 +1,26 @@
-import os
 import typing
 
 import chromadb
 from chromadb import API
 from chromadb.api.models.Collection import Collection
 from chromadb.utils.embedding_functions import SentenceTransformerEmbeddingFunction
+from loguru import logger
+from pydantic import BaseModel
 from pydantic_settings import BaseSettings
 from tqdm import tqdm
-from loguru import logger
 
 from srctag.model import FileContext, RuntimeContext
+
+
+class StorageDoc(BaseModel):
+    document: str
+    metadata: typing.Dict[str, str]
+    id: str
+
+
+class MetadataConstant(object):
+    KEY_SOURCE = "source"
+    KEY_COMMIT_TIME = "commit_time"
 
 
 class StorageConfig(BaseSettings):
@@ -47,24 +58,36 @@ class Storage(object):
             ),
         )
 
-    def process_file_ctx_to_doc(self, file: FileContext) -> str:
+    def process_file_ctx(self, file: FileContext, collection: Collection):
         """ can be overwritten for custom processing """
-        sentences = [each.message.split(os.linesep)[0] for each in file.commits]
-        doc = os.linesep.join(sentences)
-        return doc
+
+        targets = []
+        for each in file.commits:
+            # keep enough data in metadata for calc the final score
+            item = StorageDoc(
+                document=each.message,
+                metadata={
+                    MetadataConstant.KEY_SOURCE: file.name,
+                    MetadataConstant.KEY_COMMIT_TIME: str(int(each.committed_datetime.timestamp())),
+                },
+                id=f"{file.name}|{each.hexsha}"
+            )
+            targets.append(item)
+
+        for each in targets:
+            collection.add(
+                documents=[each.document],
+                metadatas=[each.metadata],
+                ids=[each.id],
+            )
 
     def embed_file(self, file: FileContext):
         if not file.commits:
             logger.warning(f"no related commits found: {file.name}")
             return
 
-        doc = self.process_file_ctx_to_doc(file)
         self.init_chroma()
-        self.chromadb_collection.add(
-            documents=[doc],
-            metadatas=[{"source": file.name}],
-            ids=[file.name],
-        )
+        self.process_file_ctx(file, self.chromadb_collection)
 
     def embed_ctx(self, ctx: RuntimeContext):
         self.init_chroma()
