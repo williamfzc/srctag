@@ -19,12 +19,13 @@ build-backend = "poetry.core.masonry.api"
 [tool.poetry.dependencies]
 python = "^3.8"
 gitpython = "*"
-chromadb = "*"
+chromadb = "0.4.14"
 pydantic-settings = "*"
 pydantic = "*"
 tqdm = "*"
 loguru = "^0.7.2"
 pandas = "^2.0.3"
+click = "^8.1.7"
 
 # actually srctag still requires `sentence_transformers` here
 # but pytorch is a large dep which I don't want to manage it here
@@ -32,3 +33,7 @@ sentence-transformers = { version = "^2.2.2", optional = true }
 
 [tool.poetry.extras]
 embedding = ["sentence-transformers"]
+
+
+[tool.poetry.scripts]
+srctag = 'srctag.cli:cli'
