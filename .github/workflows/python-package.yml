@@ -36,3 +36,7 @@ jobs:
           poetry run python3 examples/write.py
           poetry run python3 examples/read.py
           poetry run pytest
+      - name: Third Party Test
+        run: |
+          git clone https://github.com/axios/axios.git
+          poetry run python3 examples/for_axios.py
