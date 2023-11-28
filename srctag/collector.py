@@ -28,6 +28,7 @@ class CollectorConfig(BaseSettings):
 
     # file name include regex
     include_regex: str = ""
+    include_file_list: typing.List[str] = []
 
     # commit msg include regex
     commit_include_regex: str = ""
@@ -52,7 +53,7 @@ class Collector(object):
         if exc:
             raise SrcTagException() from exc
 
-        logger.debug("git metadata collecting ...")
+        logger.info("git metadata collecting ...")
         ctx = RuntimeContext()
         self._collect_files(ctx)
 
@@ -61,7 +62,7 @@ class Collector(object):
         else:
             self._collect_histories_globally(ctx)
 
-        logger.debug("metadata ready")
+        logger.info("metadata ready")
         return ctx
 
     def _check_env(self) -> typing.Optional[BaseException]:
@@ -77,6 +78,16 @@ class Collector(object):
         """collect all files which tracked by git"""
         git_repo = git.Repo(self.config.repo_root)
         git_track_files = set([each[1].path for each in git_repo.index.iter_blobs()])
+        if self.config.include_file_list:
+            logger.info("use specific file list")
+            for each in self.config.include_file_list:
+                if each not in git_track_files:
+                    logger.warning(f"specific file {each} not in git track, ignored")
+                    continue
+                ctx.files[each] = FileContext(each)
+            # END file list loop
+            return
+        # END check file list
 
         include_regex = None
         if self.config.include_regex:
@@ -95,7 +106,7 @@ class Collector(object):
             else:
                 raise SrcTagException(f"invalid file level: {self.config.file_level}")
 
-        logger.debug(f"file {len(ctx.files)} collected")
+        logger.info(f"file {len(ctx.files)} collected")
 
     def _collect_history(self, repo: Repo, file_path: str) -> typing.List[Commit]:
         kwargs = {
