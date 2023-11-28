@@ -2693,4 +2693,4 @@ embedding = ["sentence-transformers"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.8"
-content-hash = "433eaeffb19ecbc2471e1d17b95ac8f90b214398a3be5c6cb21702af4fa101ca"
+content-hash = "2cc2ba3aa383ebfe33a8ccb91af1b8b91b66592dfeea2c78e4414e2c9d2fab65"
