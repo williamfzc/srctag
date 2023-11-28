@@ -20,7 +20,7 @@ class StorageDoc(BaseModel):
 
 class MetadataConstant(object):
     KEY_SOURCE = "source"
-    KEY_COMMIT_TIME = "commit_time"
+    KEY_COMMIT_SHA = "commit_sha"
 
 
 class StorageConfig(BaseSettings):
@@ -68,7 +68,7 @@ class Storage(object):
                 document=each.message,
                 metadata={
                     MetadataConstant.KEY_SOURCE: file.name,
-                    MetadataConstant.KEY_COMMIT_TIME: str(int(each.committed_datetime.timestamp())),
+                    MetadataConstant.KEY_COMMIT_SHA: str(each.hexsha),
                 },
                 id=f"{file.name}|{each.hexsha}"
             )
@@ -91,7 +91,7 @@ class Storage(object):
 
     def embed_ctx(self, ctx: RuntimeContext):
         self.init_chroma()
-        logger.debug("start embedding source files")
+        logger.info("start embedding source files")
         for each_file in tqdm(ctx.files.values()):
             self.embed_file(each_file)
-        logger.debug("embedding finished")
+        logger.info("embedding finished")
