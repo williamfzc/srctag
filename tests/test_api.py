@@ -5,6 +5,15 @@ import pytest
 from srctag.collector import Collector
 from srctag.storage import Storage
 from srctag.tagger import Tagger, TagResult
+from loguru import logger
+
+all_tags = [
+    "storage",
+    "search",
+    "tag",
+    "test",
+    "example"
+]
 
 
 @pytest.fixture
@@ -16,13 +25,7 @@ def setup_tagger():
     storage.embed_ctx(ctx)
 
     tagger = Tagger()
-    tagger.config.tags = [
-        "storage",
-        "search",
-        "tag",
-        "test",
-        "example"
-    ]
+    tagger.config.tags = all_tags
     tag_result = tagger.tag(storage)
 
     return collector, storage, tagger, tag_result
@@ -56,9 +59,23 @@ def test_io(setup_tagger):
 def test_index(setup_tagger):
     collector, storage, tagger, tag_result = setup_tagger
 
+    assert len(tag_result.tags()) == len(all_tags)
     assert len(tag_result.files()) > 10
 
     for each in tag_result.files():
-        tags = tag_result.top_n_tags(each, 3)
-        assert len(tags) == 3
+        each_tags = tag_result.top_n_tags(each, 3)
+        assert len(each_tags) == 3
 
+
+def test_query(setup_tagger):
+    collector, storage, tagger, tag_result = setup_tagger
+
+    tags_series = tag_result.tags_by_file("examples/write.py")
+    assert len(tags_series) == len(all_tags)
+    for k, v in tags_series.items():
+        logger.info(f"tag: {k}, score: {v}")
+
+    files_series = tag_result.files_by_tag("example")
+    assert len(files_series) > 10
+    for k, v in files_series.items():
+        logger.info(f"file: {k}, score: {v}")

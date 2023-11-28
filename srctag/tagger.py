@@ -30,11 +30,21 @@ class TagResult(object):
     def files(self) -> Index:
         return self.scores_df.index
 
-    def top_n_tags(self, file_name, n) -> typing.List[str]:
-        return self.scores_df.loc[file_name].nlargest(n).index.tolist()
+    def tags_by_file(self, file_name: str) -> typing.Optional[pd.Series]:
+        if file_name not in self.scores_df.index:
+            return None
+        return self.scores_df.loc[file_name].sort_values(ascending=False)
 
-    def top_n_files(self, tag_name, n) -> typing.List[str]:
-        return self.scores_df.nlargest(n, tag_name).index.tolist()
+    def files_by_tag(self, tag_name: str) -> typing.Optional[pd.Series]:
+        if tag_name not in self.scores_df.columns:
+            return None
+        return self.scores_df.loc[:, tag_name].sort_values(ascending=False)
+
+    def top_n_tags(self, file_name: str, n: int) -> typing.List[str]:
+        return self.tags_by_file(file_name).nlargest(n).index.tolist()
+
+    def top_n_files(self, tag_name: str, n: int) -> typing.List[str]:
+        return self.files_by_tag(tag_name).nlargest(n).index.tolist()
 
 
 class TaggerConfig(BaseSettings):
