@@ -16,6 +16,7 @@ class TagResult(object):
         self.scores_df = scores_df
 
     def export_csv(self, path: str = "srctag-output.csv") -> None:
+        logger.info(f"dump result to csv: {path}")
         self.scores_df.to_csv(path)
 
     @classmethod
@@ -25,6 +26,9 @@ class TagResult(object):
 
     def tags(self) -> Index:
         return self.scores_df.columns
+
+    def files(self) -> Index:
+        return self.scores_df.index
 
     def top_n_tags(self, file_name, n) -> typing.List[str]:
         return self.scores_df.loc[file_name].nlargest(n).index.tolist()

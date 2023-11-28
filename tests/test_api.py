@@ -51,3 +51,14 @@ def test_io(setup_tagger):
 
     assert imported_tag_result.top_n_tags("srctag/storage.py", 1)[0] == tag_result.top_n_tags("srctag/storage.py", 1)[0]
     assert imported_tag_result.top_n_tags("srctag/tagger.py", 1)[0] == tag_result.top_n_tags("srctag/tagger.py", 1)[0]
+
+
+def test_index(setup_tagger):
+    collector, storage, tagger, tag_result = setup_tagger
+
+    assert len(tag_result.files()) > 10
+
+    for each in tag_result.files():
+        tags = tag_result.top_n_tags(each, 3)
+        assert len(tags) == 3
+
