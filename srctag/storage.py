@@ -57,7 +57,7 @@ class Storage(object):
                 model_name=self.config.st_model_name
             ),
             # dis range: [0, 1]
-            metadata={"hnsw:space": "cosine"}
+            metadata={"hnsw:space": "l2"}
         )
 
     def process_file_ctx(self, file: FileContext, collection: Collection):

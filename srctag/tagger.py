@@ -79,8 +79,11 @@ class Tagger(object):
 
             metadatas: typing.List[Metadata] = query_result["metadatas"][0]
             # https://github.com/langchain-ai/langchain/blob/master/libs/langchain/langchain/vectorstores/chroma.py
+            # https://stats.stackexchange.com/questions/158279/how-i-can-convert-distance-euclidean-to-similarity-score
             distances: typing.List[float] = query_result["distances"][0]
-            normalized_scores = [1 - each for each in distances]
+            normalized_scores = [
+                1.0 / (1.0 + x) for x in distances
+            ]
 
             for each_metadata, each_score in zip(metadatas, normalized_scores):
                 each_file_name = each_metadata[MetadataConstant.KEY_SOURCE]
@@ -100,8 +103,8 @@ class Tagger(object):
                 each_file_tag_result[each_tag] = each_score
             else:
                 # has been touched by other commits
-                # merge these scores
-                each_file_tag_result[each_tag] += each_score
+                # keep the closest one
+                each_file_tag_result[each_tag] = max(each_score, each_file_tag_result[each_tag])
         # END tag_results
 
         scores_df = pd.DataFrame.from_dict(ret, orient="index")
