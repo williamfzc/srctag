@@ -41,13 +41,15 @@ def prepare():
 @click.option("--output-path", default="", help="Output file path for CSV")
 @click.option("--file-level", default=FileLevelEnum.FILE.value, help="Scan file level, FILE or DIR, default to FILE")
 @click.option("--st-model", default="", help="Sentence Transformer Model")
-def tag(repo_root, max_depth_limit, include_regex, tags_file, output_path, file_level, st_model):
+@click.option("--commit-include-regex", default="", help="Commit message include regex pattern")
+def tag(repo_root, max_depth_limit, include_regex, tags_file, output_path, file_level, st_model, commit_include_regex):
     """ tag your repo """
     collector = Collector()
     collector.config.repo_root = repo_root
     collector.config.max_depth_limit = max_depth_limit
     collector.config.include_regex = include_regex
     collector.config.file_level = file_level
+    collector.config.commit_include_regex = commit_include_regex
 
     ctx = collector.collect_metadata()
     storage = Storage()
