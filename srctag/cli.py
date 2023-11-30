@@ -39,7 +39,7 @@ def prepare():
 @click.option("--include-regex", default="", help="File include regex pattern")
 @click.option("--tags-file", type=click.File("r"), default="./srctag.txt", help="Path to a text file containing tags")
 @click.option("--output-path", default="", help="Output file path for CSV")
-@click.option("--file-level", default=FileLevelEnum.FILE, help="Scan file level, FILE or DIR, default to FILE")
+@click.option("--file-level", default=FileLevelEnum.FILE.value, help="Scan file level, FILE or DIR, default to FILE")
 @click.option("--st-model", default="", help="Sentence Transformer Model")
 def tag(repo_root, max_depth_limit, include_regex, tags_file, output_path, file_level, st_model):
     """ tag your repo """
@@ -51,7 +51,8 @@ def tag(repo_root, max_depth_limit, include_regex, tags_file, output_path, file_
 
     ctx = collector.collect_metadata()
     storage = Storage()
-    storage.config.st_model_name = st_model
+    if st_model:
+        storage.config.st_model_name = st_model
     storage.embed_ctx(ctx)
     tagger = Tagger()
 
