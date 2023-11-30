@@ -56,6 +56,8 @@ class Storage(object):
             embedding_function=SentenceTransformerEmbeddingFunction(
                 model_name=self.config.st_model_name
             ),
+            # dis range: [0, 1]
+            metadata={"hnsw:space": "cosine"}
         )
 
     def process_file_ctx(self, file: FileContext, collection: Collection):

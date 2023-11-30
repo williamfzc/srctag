@@ -78,17 +78,9 @@ class Tagger(object):
             )
 
             metadatas: typing.List[Metadata] = query_result["metadatas"][0]
+            # https://github.com/langchain-ai/langchain/blob/master/libs/langchain/langchain/vectorstores/chroma.py
             distances: typing.List[float] = query_result["distances"][0]
-
-            minimum = min(distances)
-            maximum = max(distances)
-            if maximum == minimum:
-                # all values are the same
-                normalized_scores = [1 for _ in distances]
-            else:
-                normalized_scores = [
-                    1 - ((x - minimum) / (maximum - minimum)) for x in distances
-                ]
+            normalized_scores = [1 - each for each in distances]
 
             for each_metadata, each_score in zip(metadatas, normalized_scores):
                 each_file_name = each_metadata[MetadataConstant.KEY_SOURCE]
