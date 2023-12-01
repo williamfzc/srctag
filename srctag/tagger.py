@@ -3,10 +3,10 @@ from collections import OrderedDict
 
 import pandas as pd
 from chromadb import QueryResult, Metadata
+from loguru import logger
 from pandas import Index
 from pydantic_settings import BaseSettings
 from tqdm import tqdm
-from loguru import logger
 
 from srctag.storage import Storage, MetadataConstant
 
@@ -102,13 +102,14 @@ class Tagger(object):
             if each_tag not in each_file_tag_result:
                 each_file_tag_result[each_tag] = each_score
             else:
-                # has been touched by other commits
-                # keep the closest one
-                each_file_tag_result[each_tag] = max(each_score, each_file_tag_result[each_tag])
+                # has been touched by other commits, merge
+                each_file_tag_result[each_tag] += each_score
         # END tag_results
 
         scores_df = pd.DataFrame.from_dict(ret, orient="index")
-        # tag level normalization after merge
-        scores_df = scores_df.apply(lambda x: (x - x.min()) / (x.max() - x.min()), axis=0)
+        # convert score matrix into rank (use reversed rank as score). because:
+        # 1. score/distance is meaningless to users
+        # 2. can not be evaluated both rows and cols
+        scores_df = scores_df.rank(axis=0, method='min')
         logger.info(f"tag finished")
         return TagResult(scores_df=scores_df)
