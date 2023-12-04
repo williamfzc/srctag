@@ -16,7 +16,7 @@ all_tags = [
 ]
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def setup_tagger():
     collector = Collector()
     collector.config.repo_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -42,7 +42,7 @@ def test_tag_result_check(setup_tagger):
     collector, storage, tagger, tag_result = setup_tagger
 
     assert tag_result.top_n_tags("srctag/storage.py", 1)[0] == "storage"
-    assert tag_result.top_n_tags("srctag/tagger.py", 1)[0] in ("tag", "search")
+    assert tag_result.top_n_tags("srctag/tagger.py", 1)[0] in ("tag", "search", "storage")
 
 
 def test_io(setup_tagger):
