@@ -46,6 +46,9 @@ class TagResult(object):
     def top_n_files(self, tag_name: str, n: int) -> typing.List[str]:
         return self.files_by_tag(tag_name).nlargest(n).index.tolist()
 
+    def normalize_score(self, origin: float) -> float:
+        return origin / len(self.files())
+
 
 class TaggerConfig(BaseSettings):
     tags: typing.Set[str] = set()
@@ -107,6 +110,13 @@ class Tagger(object):
         # END tag_results
 
         scores_df = pd.DataFrame.from_dict(ret, orient="index")
+
+        # reduce the impacts of common files
+        row_variances = scores_df.var(axis=1)
+        max_variance = row_variances.max()
+        weights = 1.0 - row_variances / max_variance
+        scores_df = scores_df.multiply(weights, axis=0)
+
         # convert score matrix into rank (use reversed rank as score). because:
         # 1. score/distance is meaningless to users
         # 2. can not be evaluated both rows and cols

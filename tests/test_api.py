@@ -72,10 +72,14 @@ def test_query(setup_tagger):
 
     tags_series = tag_result.tags_by_file("examples/write.py")
     assert len(tags_series) == len(all_tags)
+    tags_series = tags_series[:5]
+    assert len(tags_series) == 5
     for k, v in tags_series.items():
-        logger.info(f"tag: {k}, score: {v}")
+        normalize_score = tag_result.normalize_score(v)
+        logger.info(f"tag: {k}, score: {normalize_score}")
 
     files_series = tag_result.files_by_tag("example")
     assert len(files_series) > 10
     for k, v in files_series.items():
-        logger.info(f"file: {k}, score: {v}")
+        normalize_score = tag_result.normalize_score(v)
+        logger.info(f"file: {k}, score: {normalize_score}")
