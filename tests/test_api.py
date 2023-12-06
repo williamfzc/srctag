@@ -1,11 +1,11 @@
 import os
 
 import pytest
+from loguru import logger
 
 from srctag.collector import Collector
 from srctag.storage import Storage
 from srctag.tagger import Tagger, TagResult
-from loguru import logger
 
 all_tags = [
     "storage",
@@ -54,6 +54,10 @@ def test_io(setup_tagger):
 
     assert imported_tag_result.top_n_tags("srctag/storage.py", 1)[0] == tag_result.top_n_tags("srctag/storage.py", 1)[0]
     assert imported_tag_result.top_n_tags("srctag/tagger.py", 1)[0] == tag_result.top_n_tags("srctag/tagger.py", 1)[0]
+
+    dot_file = "dot.dot"
+    tag_result.export_dot(dot_file)
+    assert os.path.isfile(dot_file)
 
 
 def test_index(setup_tagger):

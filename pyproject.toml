@@ -26,6 +26,9 @@ tqdm = "*"
 loguru = "^0.7.2"
 pandas = "^2.0.3"
 click = "^8.1.3"
+networkx = "^3.1"
+matplotlib = "*"
+pydot = "^1.4.2"
 
 # actually srctag still requires `sentence_transformers` here
 # but pytorch is a large dep which I don't want to manage it here

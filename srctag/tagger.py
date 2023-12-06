@@ -1,6 +1,8 @@
 import typing
 from collections import OrderedDict
 
+import networkx
+import networkx as nx
 import pandas as pd
 from chromadb import QueryResult, Metadata
 from loguru import logger
@@ -18,6 +20,30 @@ class TagResult(object):
     def export_csv(self, path: str = "srctag-output.csv") -> None:
         logger.info(f"dump result to csv: {path}")
         self.scores_df.to_csv(path)
+
+    def export_networkx(self, edge_limit: float = 0.5) -> nx.Graph:
+        df = self.scores_df.fillna(0)
+
+        g = nx.Graph()
+        for col in df.columns:
+            g.add_node(col, color='red')
+
+        for row in df.index:
+            g.add_node(row, color='blue')
+
+        for col in df.columns:
+            for row in df.index:
+                weight = self.normalize_score(df.loc[row, col])
+                if weight < edge_limit:
+                    continue
+                g.add_edge(col, row, weight=weight)
+
+        return g
+
+    def export_dot(self, path: str):
+        graph = self.export_networkx()
+        logger.info(f"dump result to dot: {path}")
+        networkx.drawing.nx_pydot.write_dot(graph, path)
 
     @classmethod
     def import_csv(cls, path: str) -> "TagResult":
