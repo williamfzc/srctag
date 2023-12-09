@@ -3,6 +3,7 @@ from collections import OrderedDict
 
 import networkx
 import networkx as nx
+import numpy as np
 import pandas as pd
 from chromadb import QueryResult, Metadata
 from loguru import logger
@@ -21,7 +22,7 @@ class TagResult(object):
         logger.info(f"dump result to csv: {path}")
         self.scores_df.to_csv(path)
 
-    def export_networkx(self, edge_limit: float = 0.5) -> nx.Graph:
+    def export_networkx(self) -> nx.Graph:
         df = self.scores_df.fillna(0)
 
         g = nx.Graph()
@@ -33,10 +34,7 @@ class TagResult(object):
 
         for col in df.columns:
             for row in df.index:
-                weight = self.normalize_score(df.loc[row, col])
-                if weight < edge_limit:
-                    continue
-                g.add_edge(col, row, weight=weight)
+                g.add_edge(col, row, weight=df.loc[row, col])
 
         return g
 
@@ -81,6 +79,12 @@ class TaggerConfig(BaseSettings):
 
     # eg: 0.3 == choosing the closest 30% results
     n_percent: float = 0.3
+
+    # use self.optimize or not
+    optimize: bool = False
+
+    # normalization or rank
+    normalize: bool = True
 
 
 class Tagger(object):
@@ -136,16 +140,27 @@ class Tagger(object):
         # END tag_results
 
         scores_df = pd.DataFrame.from_dict(ret, orient="index")
-
-        # reduce the impacts of common files
-        row_variances = scores_df.var(axis=1)
-        max_variance = row_variances.max()
-        weights = 1.0 - row_variances / max_variance
-        scores_df = scores_df.multiply(weights, axis=0)
+        if self.config.optimize:
+            scores_df = self.optimize(scores_df)
 
         # convert score matrix into rank (use reversed rank as score). because:
         # 1. score/distance is meaningless to users
         # 2. can not be evaluated both rows and cols
         scores_df = scores_df.rank(axis=0, method='min')
+
+        if self.config.normalize:
+            scores_df = (scores_df - scores_df.min()) / (scores_df.max() - scores_df.min())
+
         logger.info(f"tag finished")
         return TagResult(scores_df=scores_df)
+
+    def optimize(self, df: pd.DataFrame) -> pd.DataFrame:
+        scale_factor = 2.0
+        df = np.exp(df * scale_factor)
+
+        # reduce the impacts of common files
+        row_variances = df.var(axis=1)
+        max_variance = row_variances.max()
+        weights = 1.0 - row_variances / max_variance
+        df = df.multiply(weights, axis=0)
+        return df
