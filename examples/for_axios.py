@@ -2,6 +2,9 @@ import pathlib
 import sys
 import warnings
 
+import networkx as nx
+from matplotlib import pyplot as plt
+
 from srctag.collector import Collector
 from srctag.storage import Storage
 from srctag.tagger import Tagger
@@ -31,5 +34,21 @@ tagger.config.tags = [
     "Automatic serialization of data objects",
     "Client-side XSRF protection"
 ]
-tag_dict = tagger.tag(storage)
-print(tag_dict.scores_df.to_string(index=False))
+tag_result = tagger.tag(storage)
+
+# access the pandas.DataFrame
+print(tag_result.scores_df)
+
+# csv dump
+tag_result.export_csv()
+
+# networkx analysis
+graph = tag_result.export_networkx()
+
+# sample code for drawing
+pos = nx.spring_layout(graph)
+node_colors = [graph.nodes[n]['color'] for n in graph.nodes]
+edge_weights = [graph.edges[e]['weight'] for e in graph.edges]
+nx.draw(graph, pos, with_labels=True, font_weight='bold', node_size=400, node_color=node_colors,
+        font_color='black', font_size=4, edge_color='gray', width=edge_weights, alpha=0.7)
+plt.savefig("my_graph.svg")
