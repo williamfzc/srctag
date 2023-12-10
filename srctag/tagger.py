@@ -27,10 +27,10 @@ class TagResult(object):
 
         g = nx.Graph()
         for col in df.columns:
-            g.add_node(col, color='red')
+            g.add_node(col, color='lightcoral')
 
         for row in df.index:
-            g.add_node(row, color='blue')
+            g.add_node(row, color='lightblue')
 
         for col in df.columns:
             for row in df.index:
