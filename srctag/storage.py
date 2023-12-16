@@ -1,4 +1,4 @@
-import os
+import json
 import re
 import typing
 
@@ -7,9 +7,11 @@ from chromadb import API
 from chromadb.api.models.Collection import Collection
 from chromadb.utils.embedding_functions import SentenceTransformerEmbeddingFunction
 from loguru import logger
+from networkx import Graph
 from pydantic import BaseModel
 from pydantic_settings import BaseSettings
 from tqdm import tqdm
+import networkx as nx
 
 from srctag.model import FileContext, RuntimeContext, SrcTagException
 
@@ -24,6 +26,8 @@ class MetadataConstant(object):
     KEY_SOURCE = "source"
     KEY_COMMIT_SHA = "commit_sha"
     KEY_DATA_TYPE = "data_type"
+    KEY_ISSUE_ID = "issue_id"
+    KEY_TAG = "tag"
 
     DATA_TYPE_COMMIT_MSG = "commit_msg"
     DATA_TYPE_ISSUE = "issue"
@@ -40,9 +44,21 @@ class StorageConfig(BaseSettings):
     # issue regex for matching issue grammar
     # by default, we use GitHub standard
     issue_regex: str = r"(#\d+)"
+    # content mapping for avoiding too much I/O
+    # "#11" -> "content for #11"
     issue_mapping: typing.Dict[str, str] = dict()
 
     data_types: typing.Set[str] = {MetadataConstant.DATA_TYPE_COMMIT_MSG, MetadataConstant.DATA_TYPE_ISSUE}
+
+    def load_issue_mapping_from_gh_json_file(self, gh_json_file: str):
+        with open(gh_json_file) as f:
+            content = json.load(f)
+        assert isinstance(content, list), "not a valid issue dump"
+
+        for each in content:
+            sharp_id = f'#{each["number"]}'
+            self.issue_mapping[sharp_id] = each["title"]
+        logger.info(f"load {len(content)} issues from {gh_json_file}")
 
 
 class Storage(object):
@@ -53,6 +69,7 @@ class Storage(object):
 
         self.chromadb: typing.Optional[API] = None
         self.chromadb_collection: typing.Optional[Collection] = None
+        self.relation_graph: Graph = nx.Graph()
 
     def init_chroma(self):
         if self.chromadb and self.chromadb_collection:
@@ -85,7 +102,7 @@ class Storage(object):
                     MetadataConstant.KEY_COMMIT_SHA: str(each.hexsha),
                     MetadataConstant.KEY_DATA_TYPE: MetadataConstant.DATA_TYPE_COMMIT_MSG,
                 },
-                id=f"{file.name}|{each.hexsha}|{MetadataConstant.DATA_TYPE_COMMIT_MSG}"
+                id=f"{MetadataConstant.DATA_TYPE_COMMIT_MSG}|{file.name}|{each.hexsha}"
             )
             targets.append(item)
 
@@ -107,30 +124,31 @@ class Storage(object):
         targets = []
         for each in file.commits:
             issue_id_list = regex.findall(each.message)
-            issue_contents = []
-            for each_issue in issue_id_list:
-                each_issue_content = self.process_issue_id_to_title(each_issue)
+            for each_issue_id in issue_id_list:
+                each_issue_content = self.process_issue_id_to_title(each_issue_id)
                 if not each_issue_content:
                     continue
-                issue_contents.append(each_issue_content)
-            # END issue loop
 
-            if not issue_contents:
-                continue
-            item = StorageDoc(
-                document=os.sep.join(issue_contents),
-                metadata={
-                    MetadataConstant.KEY_SOURCE: file.name,
-                    MetadataConstant.KEY_COMMIT_SHA: str(each.hexsha),
-                    MetadataConstant.KEY_DATA_TYPE: MetadataConstant.DATA_TYPE_ISSUE,
-                },
-                id=f"{file.name}|{each.hexsha}|{MetadataConstant.DATA_TYPE_ISSUE}"
-            )
-            targets.append(item)
+                item = StorageDoc(
+                    document=each_issue_content,
+                    metadata={
+                        MetadataConstant.KEY_ISSUE_ID: each_issue_id,
+                        MetadataConstant.KEY_DATA_TYPE: MetadataConstant.DATA_TYPE_ISSUE,
+                    },
+                    id=f"{MetadataConstant.DATA_TYPE_ISSUE}|{each_issue_id}"
+                )
+                targets.append(item)
+
+                # save to graph
+                self.relation_graph.add_node(each_issue_id, node_type=MetadataConstant.KEY_ISSUE_ID)
+                self.relation_graph.add_node(file.name, node_type=MetadataConstant.KEY_SOURCE)
+                self.relation_graph.add_edge(each_issue_id, file.name)
+
+            # END issue loop
         # END commit loop
 
         for each in targets:
-            collection.add(
+            collection.upsert(
                 documents=[each.document],
                 metadatas=[each.metadata],
                 ids=[each.id],
