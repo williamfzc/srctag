@@ -40,3 +40,5 @@ jobs:
         run: |
           git clone https://github.com/axios/axios.git
           poetry run python3 examples/for_axios.py
+        env:
+          GH_TOKEN: ${{ github.token }}

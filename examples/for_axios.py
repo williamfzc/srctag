@@ -1,4 +1,6 @@
+import os
 import pathlib
+import subprocess
 import sys
 import warnings
 
@@ -14,6 +16,15 @@ if not axios_repo.is_dir():
     warnings.warn(f"clone axios to {axios_repo} first")
     sys.exit(0)
 
+# dump gh issues
+issue_json_file = axios_repo / "issues.json"
+subprocess.check_call(
+    f"gh issue list --json title,number --limit 5000 --state=all > {issue_json_file.as_posix()}",
+    cwd=axios_repo,
+    shell=True,
+)
+assert issue_json_file.is_file()
+
 collector = Collector()
 collector.config.repo_root = axios_repo
 collector.config.max_depth_limit = -1
@@ -21,6 +32,7 @@ collector.config.include_regex = r"lib.*"
 
 ctx = collector.collect_metadata()
 storage = Storage()
+storage.config.load_issue_mapping_from_gh_json_file((axios_repo / issue_json_file).as_posix())
 storage.embed_ctx(ctx)
 tagger = Tagger()
 tagger.config.tags = [
