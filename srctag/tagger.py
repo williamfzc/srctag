@@ -100,7 +100,7 @@ class Tagger(object):
         n_results = int(doc_count * self.config.n_percent)
 
         tag_results = []
-        relation_graph = storage.relation_graph.copy()
+        relation_graph = storage.relations.copy()
         for each_tag in tqdm(self.config.tags):
             query_result: QueryResult = storage.chromadb_collection.query(
                 query_texts=each_tag,
@@ -156,7 +156,7 @@ class Tagger(object):
 
         logger.info(f"tag finished")
         # update relation graph in storage
-        storage.relation_graph = relation_graph
+        storage.relations = relation_graph
 
         return TagResult(scores_df=scores_df)
 
@@ -165,7 +165,7 @@ class Tagger(object):
         n_results = int(doc_count * self.config.n_percent)
 
         tag_results = []
-        relation_graph = storage.relation_graph.copy()
+        relation_graph = storage.relations.copy()
         for each_tag in tqdm(self.config.tags):
             query_result: QueryResult = storage.chromadb_collection.query(
                 query_texts=each_tag,
@@ -190,7 +190,7 @@ class Tagger(object):
 
         ret = dict()
         for each_tag, each_issue_id, each_score in tag_results:
-            files = storage.relation_graph.neighbors(each_issue_id)
+            files = storage.relations.neighbors(each_issue_id)
             for each_file in files:
                 if each_file not in ret:
                     # has not been touched by other tags
@@ -223,14 +223,14 @@ class Tagger(object):
 
         logger.info(f"tag finished")
         # update relation graph in storage
-        storage.relation_graph = relation_graph
+        storage.relations = relation_graph
         return TagResult(scores_df=scores_df)
 
     def tag(self, storage: Storage) -> TagResult:
         logger.info(f"start tagging source files ...")
         storage.init_chroma()
 
-        if storage.relation_graph.number_of_nodes():
+        if storage.config.issue_mapping:
             logger.info("tag with issue")
             return self.tag_with_issue(storage)
         else:

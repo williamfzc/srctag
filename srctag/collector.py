@@ -6,11 +6,11 @@ from enum import Enum
 import git
 from git import Repo, Commit
 from loguru import logger
-
 from pydantic_settings import BaseSettings
 from tqdm import tqdm
 
 from srctag.model import FileContext, RuntimeContext, SrcTagException
+from srctag.storage import MetadataConstant
 
 
 class FileLevelEnum(str, Enum):
@@ -41,6 +41,10 @@ class CollectorConfig(BaseSettings):
     # BFS: walk the commits and get each diff files
     scan_rule: ScanRuleEnum = ScanRuleEnum.DFS
 
+    # issue regex for matching issue grammar
+    # by default, we use GitHub standard
+    issue_regex: str = r"(#\d+)"
+
 
 class Collector(object):
     def __init__(self, config: CollectorConfig = None):
@@ -62,8 +66,27 @@ class Collector(object):
         else:
             self._collect_histories_globally(ctx)
 
+        # issue processing and network building
+        self._process_relations(ctx)
+
         logger.info("metadata ready")
         return ctx
+
+    def _process_relations(self, ctx: RuntimeContext):
+        regex = re.compile(self.config.issue_regex)
+
+        for each_file in ctx.files.values():
+            for each_commit in each_file.commits:
+                issue_id_list = regex.findall(each_commit.message)
+
+                ctx.relations.add_node(each_file, node_type=MetadataConstant.KEY_SOURCE)
+                for each_issue in issue_id_list:
+                    ctx.relations.add_node(each_issue, node_type=MetadataConstant.KEY_ISSUE_ID)
+                    ctx.relations.add_edge(each_issue, each_file)
+                    # todo: missing the commit nodes
+                # END loop issue
+            # END loop commit
+        # END loop file
 
     def _check_env(self) -> typing.Optional[BaseException]:
         try:

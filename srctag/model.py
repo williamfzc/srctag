@@ -1,5 +1,6 @@
 import typing
 
+import networkx
 from git import Commit
 
 
@@ -10,8 +11,10 @@ class FileContext(object):
 
 
 class RuntimeContext(object):
+    """ shared data between components """
     def __init__(self):
         self.files: typing.Dict[str, FileContext] = dict()
+        self.relations = networkx.Graph()
 
 
 class SrcTagException(BaseException):

@@ -29,6 +29,7 @@ class MetadataConstant(object):
     KEY_ISSUE_ID = "issue_id"
     KEY_TAG = "tag"
 
+    # use in chroma
     DATA_TYPE_COMMIT_MSG = "commit_msg"
     DATA_TYPE_ISSUE = "issue"
 
@@ -41,9 +42,6 @@ class StorageConfig(BaseSettings):
     # Multi langs: paraphrase-multilingual-MiniLM-L12-v2
     st_model_name: str = "paraphrase-MiniLM-L6-v2"
 
-    # issue regex for matching issue grammar
-    # by default, we use GitHub standard
-    issue_regex: str = r"(#\d+)"
     # content mapping for avoiding too much I/O
     # "#11" -> "content for #11"
     issue_mapping: typing.Dict[str, str] = dict()
@@ -69,7 +67,7 @@ class Storage(object):
 
         self.chromadb: typing.Optional[API] = None
         self.chromadb_collection: typing.Optional[Collection] = None
-        self.relation_graph: Graph = nx.Graph()
+        self.relations: Graph = nx.Graph()
 
     def init_chroma(self):
         if self.chromadb and self.chromadb_collection:
@@ -90,7 +88,7 @@ class Storage(object):
             metadata={"hnsw:space": "l2"}
         )
 
-    def process_commit_msg(self, file: FileContext, collection: Collection):
+    def process_commit_msg(self, file: FileContext, collection: Collection, _: RuntimeContext):
         """ can be overwritten for custom processing """
         targets = []
         for each in file.commits:
@@ -118,31 +116,25 @@ class Storage(object):
         # so we use issue_mapping, keep it simple
         return self.config.issue_mapping.get(issue_id, "")
 
-    def process_issue(self, file: FileContext, collection: Collection):
-        regex = re.compile(self.config.issue_regex)
+    def process_issue(self, _: FileContext, collection: Collection, ctx: RuntimeContext):
+        issue_id_list = [x for x, y in ctx.relations.nodes(data=True) if
+                         y["node_type"] == MetadataConstant.KEY_ISSUE_ID]
 
         targets = []
-        for each in file.commits:
-            issue_id_list = regex.findall(each.message)
-            for each_issue_id in issue_id_list:
-                each_issue_content = self.process_issue_id_to_title(each_issue_id)
-                if not each_issue_content:
-                    continue
+        for each_issue_id in issue_id_list:
+            each_issue_content = self.process_issue_id_to_title(each_issue_id)
+            if not each_issue_content:
+                continue
 
-                item = StorageDoc(
-                    document=each_issue_content,
-                    metadata={
-                        MetadataConstant.KEY_ISSUE_ID: each_issue_id,
-                        MetadataConstant.KEY_DATA_TYPE: MetadataConstant.DATA_TYPE_ISSUE,
-                    },
-                    id=f"{MetadataConstant.DATA_TYPE_ISSUE}|{each_issue_id}"
-                )
-                targets.append(item)
-
-                # save to graph
-                self.relation_graph.add_node(each_issue_id, node_type=MetadataConstant.KEY_ISSUE_ID)
-                self.relation_graph.add_node(file.name, node_type=MetadataConstant.KEY_SOURCE)
-                self.relation_graph.add_edge(each_issue_id, file.name)
+            item = StorageDoc(
+                document=each_issue_content,
+                metadata={
+                    MetadataConstant.KEY_ISSUE_ID: each_issue_id,
+                    MetadataConstant.KEY_DATA_TYPE: MetadataConstant.DATA_TYPE_ISSUE,
+                },
+                id=f"{MetadataConstant.DATA_TYPE_ISSUE}|{each_issue_id}"
+            )
+            targets.append(item)
 
             # END issue loop
         # END commit loop
@@ -154,7 +146,7 @@ class Storage(object):
                 ids=[each.id],
             )
 
-    def process_file_ctx(self, file: FileContext, collection: Collection):
+    def process_file_ctx(self, file: FileContext, collection: Collection, ctx: RuntimeContext):
         process_dict = {
             MetadataConstant.DATA_TYPE_ISSUE: self.process_issue,
             MetadataConstant.DATA_TYPE_COMMIT_MSG: self.process_commit_msg
@@ -162,19 +154,20 @@ class Storage(object):
         for each in self.config.data_types:
             if each not in process_dict:
                 raise SrcTagException(f"invalid data type: {each}")
-            process_dict[each](file, collection)
+            process_dict[each](file, collection, ctx)
 
-    def embed_file(self, file: FileContext):
+    def embed_file(self, file: FileContext, ctx: RuntimeContext):
         if not file.commits:
             logger.warning(f"no related commits found: {file.name}")
             return
 
         self.init_chroma()
-        self.process_file_ctx(file, self.chromadb_collection)
+        self.process_file_ctx(file, self.chromadb_collection, ctx)
 
     def embed_ctx(self, ctx: RuntimeContext):
         self.init_chroma()
+        self.relations = ctx.relations
         logger.info("start embedding source files")
         for each_file in tqdm(ctx.files.values()):
-            self.embed_file(each_file)
+            self.embed_file(each_file, ctx)
         logger.info("embedding finished")
