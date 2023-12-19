@@ -1,8 +1,8 @@
 import json
-import re
 import typing
 
 import chromadb
+import networkx as nx
 from chromadb import API
 from chromadb.api.models.Collection import Collection
 from chromadb.utils.embedding_functions import SentenceTransformerEmbeddingFunction
@@ -11,7 +11,6 @@ from networkx import Graph
 from pydantic import BaseModel
 from pydantic_settings import BaseSettings
 from tqdm import tqdm
-import networkx as nx
 
 from srctag.model import FileContext, RuntimeContext, SrcTagException
 

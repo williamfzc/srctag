@@ -88,7 +88,12 @@ class TaggerConfig(BaseSettings):
 
 
 class Tagger(object):
-    """load feature map, search related files, and tag them"""
+    """
+    load feature map, search related files, and tag them
+
+    1. tag - issue - file
+    2. tag - commit msg - file
+    """
 
     def __init__(self, config: TaggerConfig = None):
         if not config:

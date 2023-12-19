@@ -73,17 +73,27 @@ class Collector(object):
         return ctx
 
     def _process_relations(self, ctx: RuntimeContext):
+        """
+        collect different relations from metadata
+
+        1. files - issues
+        2. files - commits
+        """
         regex = re.compile(self.config.issue_regex)
 
         for each_file in ctx.files.values():
             for each_commit in each_file.commits:
                 issue_id_list = regex.findall(each_commit.message)
 
-                ctx.relations.add_node(each_file, node_type=MetadataConstant.KEY_SOURCE)
+                ctx.relations.add_node(each_commit.hexsha, node_type=MetadataConstant.KEY_ISSUE_ID)
+                ctx.relations.add_node(each_file.name, node_type=MetadataConstant.KEY_SOURCE)
+                ctx.relations.add_edge(each_commit.hexsha, each_file.name)
+
                 for each_issue in issue_id_list:
                     ctx.relations.add_node(each_issue, node_type=MetadataConstant.KEY_ISSUE_ID)
-                    ctx.relations.add_edge(each_issue, each_file)
-                    # todo: missing the commit nodes
+                    ctx.relations.add_edge(each_issue, each_file.name)
+                    ctx.relations.add_edge(each_issue, each_commit.hexsha)
+
                 # END loop issue
             # END loop commit
         # END loop file
