@@ -1,5 +1,6 @@
 import chromadb
 import click
+import networkx as nx
 
 from chromadb.utils.embedding_functions import SentenceTransformerEmbeddingFunction
 from loguru import logger
@@ -68,6 +69,31 @@ def tag(repo_root, max_depth_limit, include_regex, tags_file, output_path, file_
         tag_dict.export_csv(path=output_path)
     else:
         tag_dict.export_csv()
+
+
+@cli.command()
+@click.option("--repo-root", default=".", help="Repository root directory")
+@click.option("--max-depth-limit", default=-1, help="Maximum depth limit")
+@click.option("--include-regex", default="", help="File include regex pattern")
+@click.option("--file-level", default=FileLevelEnum.FILE.value, help="Scan file level, FILE or DIR, default to FILE")
+@click.option("--output-path", default="srctag.dot", help="Output file path for DOT")
+def graph(repo_root, max_depth_limit, include_regex, file_level, output_path):
+    collector = Collector()
+    collector.config.repo_root = repo_root
+    collector.config.max_depth_limit = max_depth_limit
+    collector.config.include_regex = include_regex
+    collector.config.file_level = file_level
+
+    ctx = collector.collect_metadata()
+    relation_graph = ctx.relations
+
+    node_colors = {'Type1': 'tomato', 'Type2': 'lightgreen', 'Type3': 'lightblue'}  # 使用命名颜色
+    node_color_mapping = {node: node_colors.get(data.get('node_type', 'default'), 'lightgray') for node, data in
+                          relation_graph.nodes(data=True)}
+    for node, color in node_color_mapping.items():
+        relation_graph.nodes[node]['color'] = color
+
+    nx.drawing.nx_pydot.write_dot(relation_graph, output_path)
 
 
 if __name__ == '__main__':
