@@ -1,3 +1,4 @@
+import functools
 import os
 import re
 import typing
@@ -72,6 +73,14 @@ class Collector(object):
         logger.info("metadata ready")
         return ctx
 
+    @functools.lru_cache(maxsize=None)
+    def _process_diff_from_commit(self, commit: Commit) -> typing.Set[str]:
+        ret = set()
+        for each_diff in commit.diff():
+            each_b_path = each_diff.b_path
+            ret.add(each_b_path)
+        return ret
+
     def _process_relations(self, ctx: RuntimeContext):
         """
         collect different relations from metadata
@@ -81,22 +90,34 @@ class Collector(object):
         """
         regex = re.compile(self.config.issue_regex)
 
-        for each_file in ctx.files.values():
-            for each_commit in each_file.commits:
-                issue_id_list = regex.findall(each_commit.message)
+        for each_file in tqdm(ctx.files.values()):
+            ctx.relations.add_node(each_file.name, node_type=MetadataConstant.KEY_SOURCE)
 
-                ctx.relations.add_node(each_commit.hexsha, node_type=MetadataConstant.KEY_ISSUE_ID)
-                ctx.relations.add_node(each_file.name, node_type=MetadataConstant.KEY_SOURCE)
+            # and the related files
+            for each_commit in each_file.commits:
+                related_files = self._process_diff_from_commit(each_commit)
+                ctx.relations.add_node(each_commit.hexsha, node_type=MetadataConstant.KEY_COMMIT_SHA)
                 ctx.relations.add_edge(each_commit.hexsha, each_file.name)
 
+                for each_related in related_files:
+                    # commit -> related files
+                    ctx.relations.add_node(each_related, node_type=MetadataConstant.KEY_SOURCE)
+                    ctx.relations.add_edge(each_commit.hexsha, each_related)
+                # END commit -> file
+
+                issue_id_list = regex.findall(each_commit.message)
                 for each_issue in issue_id_list:
+                    # issue -> file
                     ctx.relations.add_node(each_issue, node_type=MetadataConstant.KEY_ISSUE_ID)
                     ctx.relations.add_edge(each_issue, each_file.name)
-                    ctx.relations.add_edge(each_issue, each_commit.hexsha)
 
-                # END loop issue
-            # END loop commit
-        # END loop file
+                    for each_related in related_files:
+                        ctx.relations.add_edge(each_issue, each_related)
+                    # END issue -> related files
+                # END issue -> file
+
+            # END each file added
+        # END file added
 
     def _check_env(self) -> typing.Optional[BaseException]:
         try:
