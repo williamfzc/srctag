@@ -1,0 +1,21 @@
+name: srctag
+on:
+  push:
+    tags-ignore:
+      - '*'
+  pull_request:
+    branches:
+      - '*'
+
+jobs:
+  smoke_test:
+    runs-on: ubuntu-latest
+    name: srctag test
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: srctag
+        uses: williamfzc/srctag-action@main
