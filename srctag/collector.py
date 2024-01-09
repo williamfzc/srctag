@@ -75,11 +75,7 @@ class Collector(object):
 
     @functools.lru_cache(maxsize=None)
     def _process_diff_from_commit(self, commit: Commit) -> typing.Set[str]:
-        ret = set()
-        for each_diff in commit.diff():
-            each_b_path = each_diff.b_path
-            ret.add(each_b_path)
-        return ret
+        return set(commit.stats.files.keys())
 
     def _process_relations(self, ctx: RuntimeContext):
         """
