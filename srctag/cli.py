@@ -22,6 +22,7 @@ def cli():
 def prepare():
     """ usually used for pre-downloading sentence-transformer models """
 
+
     logger.info("Start checking env. It may takes a few minutes for downloading models ...")
     # try to embed
     chromadb_cli = chromadb.Client()
