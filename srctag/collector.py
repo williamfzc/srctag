@@ -126,18 +126,17 @@ class Collector(object):
 
     def _collect_files(self, ctx: RuntimeContext):
         """collect all files which tracked by git"""
-        git_repo = git.Repo(self.config.repo_root)
-        git_track_files = set([each[1].path for each in git_repo.index.iter_blobs()])
         if self.config.include_file_list:
             logger.info("use specific file list")
             for each in self.config.include_file_list:
-                if each not in git_track_files:
-                    logger.warning(f"specific file {each} not in git track, ignored")
-                    continue
                 ctx.files[each] = FileContext(each)
             # END file list loop
             return
         # END check file list
+
+        logger.info("include file list is empty, use regex")
+        git_repo = git.Repo(self.config.repo_root)
+        git_track_files = set([each[1].path for each in git_repo.index.iter_blobs()])
 
         include_regex = None
         if self.config.include_regex:
